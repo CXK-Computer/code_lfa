@@ -1,12 +1,11 @@
-name: "Build & Release"
-# see https://medium.com/@colonal/automating-flutter-builds-and-releases-with-github-actions-77ccf4a1ccdd
+name: "Build & Release (Debug)"
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build & Release
+    name: Build & Release (Debug)
     runs-on: ubuntu-latest
     steps:
 
@@ -39,53 +38,32 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Decode Keystore
+      # --- 签名步骤已移除 ---
+      # --- 密钥库步骤已移除 ---
+
+      - name: Build Debug APK (Instead of Release)
+        run: flutter build apk --debug --split-per-abi --dart-define=VERSION=${{ env.VERSION }} --dart-define=CSVERSION=${{ env.CSVERSION }}
+
+      - name: Rename Debug Artifacts 
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
-
-      - name: Create key.properties
-        run: |
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=keystore.jks" >> android/key.properties
-
-      - name: Build APK
-        run: flutter build apk --release --split-per-abi --dart-define=VERSION=${{ env.VERSION }} --dart-define=CSVERSION=${{ env.CSVERSION }}
-
-#FIXME:      - name: Check if Tag Exists
-#FIXME:        id: check_tag
-#FIXME:        run: |
-#FIXME:          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
-#FIXME:            echo "TAG_EXISTS=true" >> $GITHUB_ENV
-#FIXME:          else
-#FIXME:            echo "TAG_EXISTS=false" >> $GITHUB_ENV
-#FIXME:          fi
-
-      - name: Modify Tag
-#FIXME:        if: env.TAG_EXISTS == 'true'
-        id: modify_tag
-        run: |
-          new_version="${{ env.VERSION }}-build-${{ github.run_number }}"
-          echo "VERSION=$new_version" >> $GITHUB_ENV
-
-      - name: Rename Artifacts 
-        run: |
-          mv build/app/outputs/apk/release/app-arm64-*release.apk "build/app/outputs/apk/release/CodeFA_${{ env.VERSION }}_Android_arm64.apk"
-          mv build/app/outputs/apk/release/app-armeabi-*release.apk "build/app/outputs/apk/release/CodeFA_${{ env.VERSION }}_Android_arm_v7a.apk"
-          mv build/app/outputs/apk/release/app-x86_64-*release.apk "build/app/outputs/apk/release/CodeFA_${{ env.VERSION }}_Android_x86_64.apk"
+          # 检查debug目录是否存在
+          if [ -d "build/app/outputs/apk/debug" ]; then
+            cd build/app/outputs/apk/debug
+            mv app-arm64-*debug.apk "CodeFA_${{ env.VERSION }}_Android_arm64-debug.apk"
+            mv app-armeabi-*debug.apk "CodeFA_${{ env.VERSION }}_Android_arm_v7a-debug.apk"
+            mv app-x86_64-*debug.apk "CodeFA_${{ env.VERSION }}_Android_x86_66-debug.apk"
+            cd ../../../../..
+          else
+            echo "错误：'build/app/outputs/apk/debug' 目录未找到。"
+            exit 1
+          fi
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: Releases
           path: |
-            build/app/outputs/apk/release/*_arm64.apk
-            build/app/outputs/apk/release/*_arm_v7a.apk
-
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "build/app/outputs/apk/release/*_arm64.apk,build/app/outputs/apk/release/*_arm_v7a.apk"
-          tag: v${{ env.VERSION }}
-          token: ${{ secrets.TOKEN }}
+            build/app/outputs/apk/debug/*_arm64-debug.apk
+            build/app/outputs/apk/debug/*_arm_v7a-debug.apk
+      
+      # --- 创建 Release 步骤已移除，因为它需要 TOKEN ---
