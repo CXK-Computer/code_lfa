@@ -38,9 +38,6 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      # --- 签名步骤已移除 ---
-      # --- 密钥库步骤已移除 ---
-
       - name: Build Debug APK (Instead of Release)
         run: flutter build apk --debug --split-per-abi --dart-define=VERSION=${{ env.VERSION }} --dart-define=CSVERSION=${{ env.CSVERSION }}
 
@@ -59,11 +56,11 @@ jobs:
           fi
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        # --- 这里是修改的地方 ---
+        uses: actions/upload-artifact@v4
+        # --- 从 v3 更新到了 v4 ---
         with:
           name: Releases
           path: |
             build/app/outputs/apk/debug/*_arm64-debug.apk
             build/app/outputs/apk/debug/*_arm_v7a-debug.apk
-      
-      # --- 创建 Release 步骤已移除，因为它需要 TOKEN ---
